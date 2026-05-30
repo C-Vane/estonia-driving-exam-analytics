@@ -16,6 +16,7 @@ import { StatCard } from "@/components/StatCard";
 import {
   getAvailableCategories,
   getAvailableOffices,
+  getAvailableYears,
   getDrivingSchoolStats,
   getExaminerStats,
   getMonthlyTrend,
@@ -40,17 +41,20 @@ interface DashboardPageProps {
   }>;
 }
 
-function parseFilters(searchParams: {
-  years?: string;
-  category?: string;
-  office?: string;
-}): FilterState {
+function parseFilters(
+  searchParams: {
+    years?: string;
+    category?: string;
+    office?: string;
+  },
+  availableYears: number[],
+): FilterState {
   const years = searchParams.years
     ? searchParams.years.split(",").map(Number).filter(Boolean)
-    : [2025, 2026];
+    : availableYears;
 
   return {
-    years: years.length > 0 ? years : [2025, 2026],
+    years: years.length > 0 ? years : availableYears,
     kategooria: searchParams.category ?? "B",
     byroo: searchParams.office ?? "all",
   };
@@ -65,7 +69,8 @@ async function DashboardContent({
     office?: string;
   };
 }) {
-  const filters = parseFilters(searchParams);
+  const availableYears = await getAvailableYears();
+  const filters = parseFilters(searchParams, availableYears);
 
   const [
     overview,
@@ -111,8 +116,8 @@ async function DashboardContent({
         </h1>
         <p className="max-w-2xl text-base leading-relaxed text-zinc-400">
           Explore pass rates, office performance, examiner statistics, driving
-          school outcomes, and repeat failure patterns using the 2025 and 2026
-          open data exports.
+          school outcomes, and repeat failure patterns using open data exports
+          from 2021 through 2026.
         </p>
       </header>
 
@@ -122,6 +127,7 @@ async function DashboardContent({
         }
       >
         <DashboardFilters
+          availableYears={availableYears}
           categories={availableCategories}
           offices={availableOffices}
           selectedYears={filters.years}

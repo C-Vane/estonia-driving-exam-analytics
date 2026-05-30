@@ -1,12 +1,12 @@
 # Estonia driving exam analytics
 
-Analytics dashboard for Estonian driving exam open data (2025 and 2026 exports).
+Analytics dashboard for Estonian driving exam open data (2021–2026 exports).
 
 Repository: [github.com/C-Vane/estonia-driving-exam-analytics](https://github.com/C-Vane/estonia-driving-exam-analytics)
 
 ## Project structure
 
-- `se_2025.csv`, `se_2026.csv` — source data at the repository root
+- `se_2021.csv` … `se_2026.csv` — source data at the repository root
 - `dashboard/` — Next.js analytics application
 
 ## Quick start
@@ -32,4 +32,4 @@ The build runs `import-data` automatically so the SQLite database is created bef
 
 ## Data
 
-CSV files are imported into `dashboard/data/exams.db`. The database file is generated locally and is not committed to Git. Run `npm run import-data` after cloning.
+CSV files matching `se_YYYY.csv` in the repository root are imported into `dashboard/data/exams.db`. The database file is generated locally and is not committed to Git. Run `npm run import-data` after cloning or when you add new yearly files.

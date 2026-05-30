@@ -577,6 +577,19 @@ export async function getPassRateByAttemptNumber(
   });
 }
 
+export async function getAvailableYears(): Promise<number[]> {
+  const database = getDatabase();
+
+  const rows = await database
+    .selectFrom("exams")
+    .select("year")
+    .distinct()
+    .orderBy("year")
+    .execute();
+
+  return rows.map((row) => row.year);
+}
+
 export async function getAvailableCategories(
   years: number[],
 ): Promise<string[]> {

@@ -4,8 +4,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 
 import { FilterSelect } from "@/components/FilterSelect";
+import { YearFilter } from "@/components/YearFilter";
 
 interface DashboardFiltersProps {
+  availableYears: number[];
   categories: string[];
   offices: string[];
   selectedYears: number[];
@@ -14,6 +16,7 @@ interface DashboardFiltersProps {
 }
 
 export function DashboardFilters({
+  availableYears,
   categories,
   offices,
   selectedYears,
@@ -37,78 +40,41 @@ export function DashboardFilters({
     navigate(params);
   }
 
-  function toggleYear(year: number) {
-    const params = new URLSearchParams(searchParams.toString());
-    const currentYears = params.get("years")?.split(",").map(Number) ?? [
-      2025, 2026,
-    ];
-    const nextYears = currentYears.includes(year)
-      ? currentYears.filter((currentYear) => currentYear !== year)
-      : [...currentYears, year].sort();
-
-    if (nextYears.length === 0) {
-      return;
-    }
-
-    params.set("years", nextYears.join(","));
-    navigate(params);
-  }
-
   return (
     <div
-      className={`surface-card-lg grid gap-8 shadow-2xl shadow-black/40 md:grid-cols-3 ${isPending ? "opacity-70" : ""}`}
+      className={`surface-card-lg flex flex-col gap-8 shadow-2xl shadow-black/40 ${isPending ? "opacity-70" : ""}`}
     >
-      <div>
-        <p className="mb-3 block text-sm font-medium text-zinc-300">Years</p>
-        <div className="flex flex-wrap gap-2">
-          {[2025, 2026].map((year) => {
-            const isSelected = selectedYears.includes(year);
+      <YearFilter availableYears={availableYears} selectedYears={selectedYears} />
 
-            return (
-              <button
-                key={year}
-                type="button"
-                onClick={() => toggleYear(year)}
-                className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
-                  isSelected
-                    ? "bg-white text-black"
-                    : "bg-black text-zinc-400 ring-1 ring-zinc-700 hover:text-zinc-200"
-                }`}
-              >
-                {year}
-              </button>
-            );
-          })}
-        </div>
+      <div className="grid gap-8 md:grid-cols-2">
+        <FilterSelect
+          id="category"
+          label="Category"
+          value={selectedCategory}
+          onChange={(value) => updateSearchParam("category", value)}
+        >
+          {categories.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </FilterSelect>
+
+        <FilterSelect
+          id="office"
+          label="Office"
+          value={selectedOffice}
+          onChange={(value) => updateSearchParam("office", value)}
+        >
+          <option value="all">All offices</option>
+          <option value="Tallinn">All Tallinn offices</option>
+          {offices.map((office) => (
+            <option key={office} value={office}>
+              {office}
+            </option>
+          ))}
+        </FilterSelect>
       </div>
-
-      <FilterSelect
-        id="category"
-        label="Category"
-        value={selectedCategory}
-        onChange={(value) => updateSearchParam("category", value)}
-      >
-        {categories.map((category) => (
-          <option key={category} value={category}>
-            {category}
-          </option>
-        ))}
-      </FilterSelect>
-
-      <FilterSelect
-        id="office"
-        label="Office"
-        value={selectedOffice}
-        onChange={(value) => updateSearchParam("office", value)}
-      >
-        <option value="all">All offices</option>
-        <option value="Tallinn">All Tallinn offices</option>
-        {offices.map((office) => (
-          <option key={office} value={office}>
-            {office}
-          </option>
-        ))}
-      </FilterSelect>
     </div>
   );
 }

@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Estonia Driving Exams Dashboard",
   description:
-    "Analytics dashboard for Estonia driving exam open data from 2025 and 2026.",
+    "Analytics dashboard for Estonia driving exam open data from 2021 to 2026.",
 };
 
 export default function RootLayout({

@@ -143,10 +143,20 @@ function main() {
     }
   });
 
-  const csvFiles = [
-    { file: path.join(projectRoot, "..", "se_2025.csv"), year: 2025 },
-    { file: path.join(projectRoot, "..", "se_2026.csv"), year: 2026 },
-  ];
+  const repositoryRoot = path.join(projectRoot, "..");
+  const csvFiles = fs
+    .readdirSync(repositoryRoot)
+    .filter((fileName) => /^se_\d{4}\.csv$/i.test(fileName))
+    .map((fileName) => {
+      const year = Number(fileName.match(/\d{4}/)?.[0]);
+
+      return {
+        file: path.join(repositoryRoot, fileName),
+        year,
+      };
+    })
+    .filter((entry) => Number.isFinite(entry.year))
+    .sort((left, right) => left.year - right.year);
 
   let totalRows = 0;
 
