@@ -1,6 +1,8 @@
-# Estonia driving exams 2023+
+# Estonia driving exam analytics
 
 Analytics dashboard for Estonian driving exam open data (2025 and 2026 exports).
+
+Repository: [github.com/C-Vane/estonia-driving-exam-analytics](https://github.com/C-Vane/estonia-driving-exam-analytics)
 
 ## Project structure
 
