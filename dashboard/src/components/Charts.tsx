@@ -28,19 +28,14 @@ import {
   chartAxisTick,
   chartLegendStyle,
   chartTheme,
+  outcomeSliceColors,
+  shadeAt,
 } from "@/lib/chart-theme";
 
 const tooltipStyle = chartTheme.tooltip;
 
 const legendProps = {
   wrapperStyle: chartLegendStyle,
-};
-
-const OUTCOME_COLORS: Record<string, string> = {
-  Passed: "#34d399",
-  Failed: "#f87171",
-  "No-show": "#fbbf24",
-  Interrupted: "#737373",
 };
 
 interface OfficeSuccessChartProps {
@@ -94,12 +89,11 @@ export function OfficeSuccessChart({ data }: OfficeSuccessChartProps) {
             }
           />
           <Legend {...legendProps} />
-          <Bar
-            dataKey="successRate"
-            name="Success rate"
-            fill="#60a5fa"
-            radius={[0, 6, 6, 0]}
-          />
+          <Bar dataKey="successRate" name="Success rate" radius={[0, 6, 6, 0]}>
+            {chartData.map((_, index) => (
+              <Cell key={index} fill={shadeAt(index)} />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </ChartContainer>
@@ -118,7 +112,7 @@ export function OutcomeBreakdownChart({ data }: OutcomeBreakdownChartProps) {
   }));
 
   return (
-    <ChartContainer className="w-full" style={{ height: 420 }}>
+    <ChartContainer className="w-full" style={{ height: 440 }}>
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
@@ -127,14 +121,14 @@ export function OutcomeBreakdownChart({ data }: OutcomeBreakdownChartProps) {
             nameKey="name"
             cx="50%"
             cy="50%"
-            innerRadius={90}
-            outerRadius={150}
+            innerRadius={95}
+            outerRadius={160}
             paddingAngle={2}
             label={({ name, percent, x, y }) => (
               <text
                 x={x}
                 y={y}
-                fill="#d4d4d4"
+                fill="#a1a1aa"
                 textAnchor="middle"
                 dominantBaseline="central"
                 fontSize={12}
@@ -142,13 +136,13 @@ export function OutcomeBreakdownChart({ data }: OutcomeBreakdownChartProps) {
                 {`${name} (${((percent ?? 0) * 100).toFixed(1)}%)`}
               </text>
             )}
-            labelLine={{ stroke: chartTheme.axis }}
+            labelLine={{ stroke: "#52525b" }}
           >
             {chartData.map((entry) => (
               <Cell
                 key={entry.name}
-                fill={OUTCOME_COLORS[entry.name] ?? "#94a3b8"}
-                stroke="#0a0a0a"
+                fill={outcomeSliceColors[entry.name] ?? shadeAt(0)}
+                stroke="#121212"
                 strokeWidth={2}
               />
             ))}
@@ -225,12 +219,11 @@ export function CategorySuccessChart({ data }: CategorySuccessChartProps) {
             }
           />
           <Legend {...legendProps} />
-          <Bar
-            dataKey="successRate"
-            name="Success rate"
-            fill="#a78bfa"
-            radius={[0, 6, 6, 0]}
-          />
+          <Bar dataKey="successRate" name="Success rate" radius={[0, 6, 6, 0]}>
+            {chartData.map((_, index) => (
+              <Cell key={index} fill={shadeAt(index)} />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </ChartContainer>
@@ -281,7 +274,11 @@ export function FailureReasonsChart({ data }: FailureReasonsChartProps) {
             labelStyle={{ color: "#fafafa" }}
             formatter={(value) => [Number(value).toLocaleString(), "Failures"]}
           />
-          <Bar dataKey="count" name="Failures" fill="#f87171" radius={[0, 6, 6, 0]} />
+          <Bar dataKey="count" name="Failures" radius={[0, 6, 6, 0]}>
+            {chartData.map((_, index) => (
+              <Cell key={index} fill={shadeAt(index)} />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </ChartContainer>
@@ -324,12 +321,11 @@ export function AttemptPassRateChart({ data }: AttemptPassRateChartProps) {
             }}
           />
           <Legend {...legendProps} />
-          <Bar
-            dataKey="successRate"
-            name="Success rate"
-            fill="#38bdf8"
-            radius={[6, 6, 0, 0]}
-          />
+          <Bar dataKey="successRate" name="Success rate" radius={[6, 6, 0, 0]}>
+            {chartData.map((_, index) => (
+              <Cell key={index} fill={shadeAt(index)} />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </ChartContainer>
@@ -387,8 +383,8 @@ export function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
             type="monotone"
             dataKey="successRate"
             name="Success rate"
-            stroke="#34d399"
-            strokeWidth={3}
+            stroke={chartTheme.linePrimary}
+            strokeWidth={2}
             dot={false}
           />
           <Line
@@ -396,7 +392,7 @@ export function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
             type="monotone"
             dataKey="totalAttempts"
             name="Attempts"
-            stroke="#c084fc"
+            stroke={chartTheme.lineSecondary}
             strokeWidth={2}
             dot={false}
           />
@@ -420,9 +416,9 @@ export function RankedSuccessTable({
   return (
     <div>
       <h3 className="mb-4 text-lg font-semibold text-white">{title}</h3>
-      <div className="overflow-x-auto rounded-xl border border-neutral-800">
-        <table className="w-full text-left text-sm text-neutral-400">
-          <thead className="bg-neutral-900 text-xs uppercase tracking-wide text-neutral-300">
+      <div className="overflow-x-auto rounded-xl border border-zinc-800/80">
+        <table className="w-full text-left text-sm text-zinc-400">
+          <thead className="bg-black/50 text-xs uppercase tracking-wide text-zinc-300">
             <tr>
               <th className="px-4 py-3 font-semibold">{labelHeader}</th>
               <th className="px-4 py-3 font-semibold">Passed</th>
@@ -431,9 +427,9 @@ export function RankedSuccessTable({
               <th className="px-4 py-3 font-semibold">Success rate</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-800 bg-neutral-950">
+          <tbody className="divide-y divide-zinc-800">
             {rows.slice(0, 15).map((row) => (
-              <tr key={row.label} className="hover:bg-neutral-900">
+              <tr key={row.label} className="hover:bg-zinc-900/40">
                 <td className="px-4 py-3 font-medium text-white">
                   {row.label}
                 </td>
@@ -466,9 +462,9 @@ export function SimpleTable<T extends Record<string, string | number>>({
   return (
     <div>
       <h3 className="mb-4 text-lg font-semibold text-white">{title}</h3>
-      <div className="overflow-x-auto rounded-xl border border-neutral-800">
-        <table className="w-full text-left text-sm text-neutral-400">
-          <thead className="bg-neutral-900 text-xs uppercase tracking-wide text-neutral-300">
+      <div className="overflow-x-auto rounded-xl border border-zinc-800/80">
+        <table className="w-full text-left text-sm text-zinc-400">
+          <thead className="bg-black/50 text-xs uppercase tracking-wide text-zinc-300">
             <tr>
               {columns.map((column) => (
                 <th key={String(column.key)} className="px-4 py-3 font-semibold">
@@ -477,9 +473,9 @@ export function SimpleTable<T extends Record<string, string | number>>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-800 bg-neutral-950">
+          <tbody className="divide-y divide-zinc-800">
             {rows.map((row, index) => (
-              <tr key={index} className="hover:bg-neutral-900">
+              <tr key={index} className="hover:bg-zinc-900/40">
                 {columns.map((column) => (
                   <td key={String(column.key)} className="px-4 py-3">
                     {row[column.key]}

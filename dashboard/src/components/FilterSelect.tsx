@@ -20,7 +20,7 @@ export function FilterSelect({
 }: FilterSelectProps) {
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block text-sm font-medium text-neutral-300">
+      <label htmlFor={id} className="mb-2 block text-sm font-medium text-zinc-300">
         {label}
       </label>
       <div className="relative">
@@ -28,11 +28,11 @@ export function FilterSelect({
           id={id}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="block w-full appearance-none rounded-xl border border-neutral-700 bg-neutral-900 py-2.5 pr-10 pl-3 text-sm text-white focus:border-neutral-500 focus:ring-2 focus:ring-neutral-600 focus:outline-none"
+          className="block w-full appearance-none rounded-xl border border-zinc-700 bg-black py-2.5 pr-10 pl-3 text-sm text-white focus:border-[var(--accent)] focus:ring-2 focus:ring-sky-500/25 focus:outline-none"
         >
           {children}
         </select>
-        <ChevronDownIcon className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+        <ChevronDownIcon className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-zinc-500" />
       </div>
     </div>
   );

@@ -101,15 +101,15 @@ async function DashboardContent({
   ]);
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-10 sm:px-6">
       <header className="space-y-3">
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-400">
+        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-zinc-500">
           Estonia driving exams
         </p>
         <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
           Driving exam analytics dashboard
         </h1>
-        <p className="max-w-3xl text-neutral-400">
+        <p className="max-w-2xl text-base leading-relaxed text-zinc-400">
           Explore pass rates, office performance, examiner statistics, driving
           school outcomes, and repeat failure patterns using the 2025 and 2026
           open data exports.
@@ -118,7 +118,7 @@ async function DashboardContent({
 
       <Suspense
         fallback={
-          <div className="h-[7.5rem] animate-pulse rounded-2xl border border-neutral-800 bg-neutral-950" />
+          <div className="surface-card-lg h-[7.5rem] animate-pulse" />
         }
       >
         <DashboardFilters
@@ -130,7 +130,7 @@ async function DashboardContent({
         />
       </Suspense>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Total exams"
           value={overview.totalExams.toLocaleString()}
@@ -140,19 +140,16 @@ async function DashboardContent({
           title="Success rate"
           value={`${overview.successRate.toFixed(1)}%`}
           description="Passed divided by passed plus failed attempts."
-          tone="success"
         />
         <StatCard
           title="Failed attempts"
           value={overview.failedCount.toLocaleString()}
           description="Exams marked as not passed."
-          tone="danger"
         />
         <StatCard
           title="No-shows"
           value={overview.noShowCount.toLocaleString()}
           description="Candidates who did not appear for the exam."
-          tone="warning"
         />
       </section>
 
@@ -267,7 +264,7 @@ export default async function Home({
   const resolvedSearchParams = await searchParams;
 
   return (
-    <main className="dashboard-grid min-h-screen">
+    <main className="dashboard-page">
       <DashboardContent searchParams={resolvedSearchParams} />
     </main>
   );

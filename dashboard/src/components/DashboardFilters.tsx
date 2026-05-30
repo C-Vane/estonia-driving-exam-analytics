@@ -56,10 +56,10 @@ export function DashboardFilters({
 
   return (
     <div
-      className={`grid gap-6 rounded-2xl border border-neutral-800 bg-neutral-950 p-5 md:grid-cols-3 ${isPending ? "opacity-70" : ""}`}
+      className={`surface-card-lg grid gap-8 shadow-2xl shadow-black/40 md:grid-cols-3 ${isPending ? "opacity-70" : ""}`}
     >
       <div>
-        <p className="mb-2 block text-sm font-medium text-neutral-300">Years</p>
+        <p className="mb-3 block text-sm font-medium text-zinc-300">Years</p>
         <div className="flex flex-wrap gap-2">
           {[2025, 2026].map((year) => {
             const isSelected = selectedYears.includes(year);
@@ -69,10 +69,10 @@ export function DashboardFilters({
                 key={year}
                 type="button"
                 onClick={() => toggleYear(year)}
-                className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
+                className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
                   isSelected
-                    ? "border-white bg-white text-black"
-                    : "border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-neutral-500 hover:text-white"
+                    ? "bg-white text-black"
+                    : "bg-black text-zinc-400 ring-1 ring-zinc-700 hover:text-zinc-200"
                 }`}
               >
                 {year}

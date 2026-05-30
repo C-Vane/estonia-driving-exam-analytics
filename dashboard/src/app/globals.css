@@ -2,34 +2,59 @@
 
 :root {
   color-scheme: dark;
-  --background: #000000;
-  --foreground: #fafafa;
+  --page: #000000;
+  --page-foreground: #fafafa;
+  --page-muted: #a1a1aa;
+  --page-subtle: #71717a;
   --surface: #121212;
-  --surface-border: #262626;
-  --muted: #a3a3a3;
-  --accent: #ffffff;
+  --surface-border: #27272a;
+  --accent: #38bdf8;
+  --accent-strong: #0ea5e9;
+  --accent-deep: #0284c7;
+  --accent-dim: #1e3a5f;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-page: var(--page);
+  --color-page-foreground: var(--page-foreground);
   --color-surface: var(--surface);
-  --color-surface-border: var(--surface-border);
-  --color-muted: var(--muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--page);
+  color: var(--page-foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
-.dashboard-grid {
+.dashboard-page {
+  min-height: 100vh;
   background-color: #000000;
   background-image:
-    linear-gradient(to right, #1a1a1a 1px, transparent 1px),
-    linear-gradient(to bottom, #1a1a1a 1px, transparent 1px);
-  background-size: 48px 48px;
+    radial-gradient(
+      ellipse 90% 55% at 50% -15%,
+      rgba(56, 189, 248, 0.09),
+      transparent 55%
+    ),
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    48px 48px,
+    48px 48px;
+}
+
+.surface-card {
+  border-radius: 1rem;
+  border: 1px solid var(--surface-border);
+  background-color: var(--surface);
+  padding: 1.5rem;
+}
+
+.surface-card-lg {
+  border-radius: 1.25rem;
+  border: 1px solid var(--surface-border);
+  background-color: var(--surface);
+  padding: 1.75rem;
 }

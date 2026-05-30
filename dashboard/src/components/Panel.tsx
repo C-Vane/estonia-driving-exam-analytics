@@ -7,9 +7,7 @@ interface PanelProps {
 
 export function Panel({ children, className = "" }: PanelProps) {
   return (
-    <div
-      className={`rounded-2xl border border-neutral-800 bg-neutral-950 p-6 ${className}`}
-    >
+    <div className={`surface-card-lg shadow-2xl shadow-black/40 ${className}`}>
       {children}
     </div>
   );
@@ -22,10 +20,10 @@ interface PanelHeadingProps {
 
 export function PanelHeading({ title, description }: PanelHeadingProps) {
   return (
-    <div className={description ? "mb-6" : "mb-4"}>
+    <div className={description ? "mb-6" : "mb-5"}>
       <h2 className="text-xl font-semibold tracking-tight text-white">{title}</h2>
       {description && (
-        <p className="mt-1 text-sm leading-relaxed text-neutral-400">
+        <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">
           {description}
         </p>
       )}

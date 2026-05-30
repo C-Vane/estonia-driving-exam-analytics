@@ -27,7 +27,7 @@ export function ChartContainer({
   if (!mounted) {
     return (
       <div
-        className={`${className} animate-pulse rounded-xl bg-neutral-900`}
+        className={`${className} animate-pulse rounded-xl bg-zinc-900/50`}
         style={style}
         aria-hidden="true"
       />
