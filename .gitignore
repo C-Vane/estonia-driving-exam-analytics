@@ -1,0 +1,10 @@
+.DS_Store
+*.pem
+.env
+.env.*
+
+# Dashboard app artifacts
+dashboard/node_modules/
+dashboard/.next/
+dashboard/out/
+dashboard/data/exams.db

@@ -1,0 +1,36 @@
+{
+  "name": "dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "npm run import-data && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "import-data": "tsx scripts/import-data.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "csv-parse": "^6.2.1",
+    "flowbite": "^4.0.2",
+    "flowbite-react": "^0.12.17",
+    "kysely": "^0.28.17",
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "recharts": "^3.8.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "kysely-codegen": "^0.20.0",
+    "tailwindcss": "^4",
+    "tsx": "^4.22.3",
+    "typescript": "^5"
+  }
+}
