@@ -1,8 +1,14 @@
 "use client";
 
-import type { TooltipProps } from "recharts";
+import type { TooltipContentProps, TooltipPayloadEntry } from "recharts";
 
 import { chartTheme } from "@/lib/chart-theme";
+
+export interface MonthlyTrendChartPoint {
+  month: string;
+  successRate: number;
+  totalAttempts: number;
+}
 
 export function formatMonthLabel(month: string): string {
   const [yearPart, monthPart] = month.split("-");
@@ -19,23 +25,48 @@ export function formatMonthLabel(month: string): string {
   });
 }
 
-interface DualMetricTooltipPayload {
-  successRate?: number;
-  totalAttempts?: number;
+function readNumericMetric(
+  value: TooltipPayloadEntry["value"],
+): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    return Number(value);
+  }
+
+  return undefined;
+}
+
+function metricFromSeries(
+  payload: TooltipContentProps["payload"],
+  dataKey: keyof MonthlyTrendChartPoint,
+): number | undefined {
+  const entry = payload.find((item) => item.dataKey === dataKey);
+
+  return readNumericMetric(entry?.value);
 }
 
 export function MonthlyTrendTooltip({
   active,
   payload,
   label,
-}: TooltipProps<number, string>) {
-  if (!active || !payload?.length || label === undefined) {
+}: TooltipContentProps) {
+  if (!active || !payload.length || label === undefined) {
     return null;
   }
 
-  const point = payload[0]?.payload as DualMetricTooltipPayload | undefined;
-  const successRate = point?.successRate;
-  const totalAttempts = point?.totalAttempts;
+  const chartPoint = payload[0]?.payload as MonthlyTrendChartPoint | undefined;
+
+  const successRate =
+    chartPoint?.successRate ?? metricFromSeries(payload, "successRate");
+  const totalAttempts =
+    chartPoint?.totalAttempts ?? metricFromSeries(payload, "totalAttempts");
 
   return (
     <div
@@ -52,7 +83,7 @@ export function MonthlyTrendTooltip({
           <dt>Scored exam attempts</dt>
           <dd className="font-medium text-white">
             {totalAttempts !== undefined
-              ? Number(totalAttempts).toLocaleString()
+              ? totalAttempts.toLocaleString()
               : "—"}
           </dd>
         </div>
@@ -64,7 +95,7 @@ export function MonthlyTrendTooltip({
           <dt>Success rate</dt>
           <dd className="font-medium text-white">
             {successRate !== undefined
-              ? `${Number(successRate).toFixed(1)}%`
+              ? `${successRate.toFixed(1)}%`
               : "—"}
           </dd>
         </div>

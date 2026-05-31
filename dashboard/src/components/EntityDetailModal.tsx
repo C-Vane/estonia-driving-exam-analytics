@@ -213,7 +213,7 @@ function OfficeDetailContent({ detail }: { detail: OfficeDetail }) {
                 tick={chartAxisTick}
                 stroke={chartTheme.axis}
               />
-              <Tooltip content={<MonthlyTrendTooltip />} />
+              <Tooltip content={MonthlyTrendTooltip} />
               <Line
                 type="monotone"
                 dataKey="successRate"

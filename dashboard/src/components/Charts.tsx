@@ -109,8 +109,8 @@ export function OfficeSuccessChart({
             name="Success rate"
             radius={[0, 6, 6, 0]}
             className="cursor-pointer"
-            onClick={(_data, _index, event) => {
-              const payload = event?.payload as { office?: string } | undefined;
+            onClick={(data) => {
+              const payload = data?.payload as { office?: string } | undefined;
 
               if (payload?.office) {
                 setSelectedOffice(payload.office);
@@ -402,7 +402,7 @@ export function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
             tick={chartAxisTick}
             stroke={chartTheme.axis}
           />
-          <Tooltip content={<MonthlyTrendTooltip />} />
+          <Tooltip content={MonthlyTrendTooltip} />
           <Legend {...legendProps} />
           <Line
             yAxisId="left"
