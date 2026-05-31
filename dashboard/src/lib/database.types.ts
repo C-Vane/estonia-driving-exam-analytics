@@ -85,3 +85,37 @@ export interface AttemptPassRatePoint {
   passedCount: number;
   successRate: number;
 }
+
+export interface PaginatedResult<T> {
+  rows: T[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}
+
+export interface OfficeDetail {
+  office: string;
+  overview: GroupSuccessStats;
+  monthlyTrend: MonthlyTrendPoint[];
+  byCategory: GroupSuccessStats[];
+}
+
+export interface ExaminerDetail {
+  examiner: string;
+  passedCount: number;
+  failedCount: number;
+  noShowCount: number;
+  interruptedCount: number;
+  totalExams: number;
+  successRate: number;
+  monthlyActivity: MonthlyTrendPoint[];
+  byOffice: GroupSuccessStats[];
+  byCategory: GroupSuccessStats[];
+  activeMonths: string[];
+  averageDurationMinutes: {
+    passed: number | null;
+    failed: number | null;
+    recordedExams: number;
+  };
+}

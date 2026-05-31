@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Bar,
   BarChart,
@@ -16,7 +17,10 @@ import {
   YAxis,
 } from "recharts";
 
+import { EntityDetailModal } from "@/components/EntityDetailModal";
+
 import { ChartContainer } from "@/components/ChartContainer";
+import { MonthlyTrendTooltip } from "@/components/ChartTooltip";
 import type {
   AttemptPassRatePoint,
   FailureReasonPoint,
@@ -40,9 +44,15 @@ const legendProps = {
 
 interface OfficeSuccessChartProps {
   data: GroupSuccessStats[];
+  apiFilterQuery: string;
 }
 
-export function OfficeSuccessChart({ data }: OfficeSuccessChartProps) {
+export function OfficeSuccessChart({
+  data,
+  apiFilterQuery,
+}: OfficeSuccessChartProps) {
+  const [selectedOffice, setSelectedOffice] = useState<string | null>(null);
+
   const chartData = data.map((item) => ({
     office: item.label,
     successRate: Number(item.successRate.toFixed(1)),
@@ -52,13 +62,18 @@ export function OfficeSuccessChart({ data }: OfficeSuccessChartProps) {
   const chartHeight = Math.max(384, chartData.length * 36);
 
   return (
-    <ChartContainer className="w-full" style={{ height: chartHeight }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          layout="vertical"
-          data={chartData}
-          margin={{ top: 8, right: 24, left: 8, bottom: 8 }}
-        >
+    <>
+      <p className="mb-3 text-sm text-zinc-500">
+        Click an office bar to see monthly pass rates (weekday breakdown is not
+        available in this dataset).
+      </p>
+      <ChartContainer className="w-full" style={{ height: chartHeight }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            layout="vertical"
+            data={chartData}
+            margin={{ top: 8, right: 24, left: 8, bottom: 8 }}
+          >
           <CartesianGrid
             stroke={chartTheme.grid}
             strokeDasharray="3 3"
@@ -89,7 +104,19 @@ export function OfficeSuccessChart({ data }: OfficeSuccessChartProps) {
             }
           />
           <Legend {...legendProps} />
-          <Bar dataKey="successRate" name="Success rate" radius={[0, 6, 6, 0]}>
+          <Bar
+            dataKey="successRate"
+            name="Success rate"
+            radius={[0, 6, 6, 0]}
+            className="cursor-pointer"
+            onClick={(_data, _index, event) => {
+              const payload = event?.payload as { office?: string } | undefined;
+
+              if (payload?.office) {
+                setSelectedOffice(payload.office);
+              }
+            }}
+          >
             {chartData.map((_, index) => (
               <Cell key={index} fill={shadeAt(index)} />
             ))}
@@ -97,6 +124,16 @@ export function OfficeSuccessChart({ data }: OfficeSuccessChartProps) {
         </BarChart>
       </ResponsiveContainer>
     </ChartContainer>
+
+      {selectedOffice && (
+        <EntityDetailModal
+          type="office"
+          name={selectedOffice}
+          filterQuery={apiFilterQuery}
+          onClose={() => setSelectedOffice(null)}
+        />
+      )}
+    </>
   );
 }
 
@@ -365,24 +402,13 @@ export function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
             tick={chartAxisTick}
             stroke={chartTheme.axis}
           />
-          <Tooltip
-            contentStyle={tooltipStyle}
-            itemStyle={{ color: chartTheme.tick }}
-            labelStyle={{ color: "#fafafa" }}
-            formatter={(value, name) => {
-              if (name === "successRate") {
-                return [`${value}%`, "Success rate"];
-              }
-
-              return [value, "Attempts"];
-            }}
-          />
+          <Tooltip content={<MonthlyTrendTooltip />} />
           <Legend {...legendProps} />
           <Line
             yAxisId="left"
             type="monotone"
             dataKey="successRate"
-            name="Success rate"
+            name="Success rate (%)"
             stroke={chartTheme.linePrimary}
             strokeWidth={2}
             dot={false}
@@ -391,7 +417,7 @@ export function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
             yAxisId="right"
             type="monotone"
             dataKey="totalAttempts"
-            name="Attempts"
+            name="Scored exam attempts"
             stroke={chartTheme.lineSecondary}
             strokeWidth={2}
             dot={false}
@@ -428,7 +454,7 @@ export function RankedSuccessTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-800">
-            {rows.slice(0, 15).map((row) => (
+            {rows.map((row) => (
               <tr key={row.label} className="hover:bg-zinc-900/40">
                 <td className="px-4 py-3 font-medium text-white">
                   {row.label}

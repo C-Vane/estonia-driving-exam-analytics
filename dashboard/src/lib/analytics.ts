@@ -1,16 +1,20 @@
 import { sql, type ExpressionBuilder } from "kysely";
 
 import { getDatabase } from "./db";
+import { TABLE_PAGE_SIZE } from "./dashboard-filters";
 import type {
   AttemptPassRatePoint,
   DashboardFilters,
   Database,
+  ExaminerDetail,
   FailureReasonPoint,
   GroupSuccessStats,
   MonthlyTrendPoint,
+  OfficeDetail,
   OutcomeBreakdownPoint,
   OutlierSchoolStats,
   OverviewStats,
+  PaginatedResult,
   TopFailureStats,
 } from "./database.types";
 
@@ -191,9 +195,28 @@ export async function getMonthlyTrend(
   });
 }
 
+function mapGroupSuccessRow(row: {
+  label: string;
+  passedCount: number | string | bigint;
+  failedCount: number | string | bigint;
+  totalAttempts: number | string | bigint;
+}): GroupSuccessStats {
+  const passedCount = Number(row.passedCount);
+  const failedCount = Number(row.failedCount);
+  const totalAttempts = Number(row.totalAttempts);
+
+  return {
+    label: row.label,
+    passedCount,
+    failedCount,
+    totalAttempts,
+    successRate:
+      totalAttempts > 0 ? (passedCount / totalAttempts) * 100 : 0,
+  };
+}
+
 export async function getExaminerStats(
   filters: DashboardFilters,
-  minimumPassedCount = 20,
 ): Promise<GroupSuccessStats[]> {
   const database = getDatabase();
 
@@ -219,9 +242,9 @@ export async function getExaminerStats(
     )
     .groupBy("eksamineerija")
     .having(
-      sql`sum(case when seisund = 'SOORITATUD' then 1 else 0 end)`,
+      sql`sum(case when seisund in ('SOORITATUD', 'MITTE_SOORITATUD') then 1 else 0 end)`,
       ">",
-      minimumPassedCount,
+      0,
     )
     .orderBy(
       sql`sum(case when seisund = 'SOORITATUD' then 1 else 0 end) * 1.0 / nullif(sum(case when seisund in ('SOORITATUD', 'MITTE_SOORITATUD') then 1 else 0 end), 0)`,
@@ -229,25 +252,19 @@ export async function getExaminerStats(
     )
     .execute();
 
-  return rows.map((row) => {
-    const passedCount = Number(row.passedCount);
-    const failedCount = Number(row.failedCount);
-    const totalAttempts = Number(row.totalAttempts);
-
-    return {
+  return rows.map((row) =>
+    mapGroupSuccessRow({
       label: row.label,
-      passedCount,
-      failedCount,
-      totalAttempts,
-      successRate:
-        totalAttempts > 0 ? (passedCount / totalAttempts) * 100 : 0,
-    };
-  });
+      passedCount: row.passedCount,
+      failedCount: row.failedCount,
+      totalAttempts: row.totalAttempts,
+    }),
+  );
 }
 
 export async function getDrivingSchoolStats(
   filters: DashboardFilters,
-  minimumAttempts = 20,
+  minimumAttempts = 0,
 ): Promise<GroupSuccessStats[]> {
   const database = getDatabase();
 
@@ -604,4 +621,489 @@ export async function getAvailableCategories(
     .execute();
 
   return rows.map((row) => row.kategooria);
+}
+
+type PaginatedGroupKind = "examiner" | "drivingSchool";
+
+async function buildPaginatedGroupQuery(
+  filters: DashboardFilters,
+  kind: PaginatedGroupKind,
+) {
+  const database = getDatabase();
+
+  if (kind === "examiner") {
+    return database
+      .selectFrom("exams")
+      .select([
+        "eksamineerija as label",
+        sql<number>`sum(case when seisund = 'SOORITATUD' then 1 else 0 end)`.as(
+          "passedCount",
+        ),
+        sql<number>`sum(case when seisund = 'MITTE_SOORITATUD' then 1 else 0 end)`.as(
+          "failedCount",
+        ),
+        sql<number>`sum(case when seisund in ('SOORITATUD', 'MITTE_SOORITATUD') then 1 else 0 end)`.as(
+          "totalAttempts",
+        ),
+      ])
+      .where((eb) =>
+        eb.and([
+          applyFilters(eb, filters),
+          eb("seisund", "not in", ["KATKESTATUD", "EI_ILMUNUD_KOHALE"]),
+        ]),
+      )
+      .groupBy("eksamineerija")
+      .having(
+        sql`sum(case when seisund in ('SOORITATUD', 'MITTE_SOORITATUD') then 1 else 0 end)`,
+        ">",
+        0,
+      );
+  }
+
+  return database
+    .selectFrom("exams")
+    .select([
+      sql<string>`coalesce(nullif(trim(viimane_autokool), ''), 'Unknown')`.as(
+        "label",
+      ),
+      sql<number>`sum(case when seisund = 'SOORITATUD' then 1 else 0 end)`.as(
+        "passedCount",
+      ),
+      sql<number>`sum(case when seisund = 'MITTE_SOORITATUD' then 1 else 0 end)`.as(
+        "failedCount",
+      ),
+      sql<number>`sum(case when seisund in ('SOORITATUD', 'MITTE_SOORITATUD') then 1 else 0 end)`.as(
+        "totalAttempts",
+      ),
+    ])
+    .where((eb) =>
+      eb.and([
+        applyFilters(eb, filters),
+        eb("seisund", "in", [...COUNTED_STATUSES]),
+      ]),
+    )
+    .groupBy(sql`coalesce(nullif(trim(viimane_autokool), ''), 'Unknown')`)
+    .having(
+      sql`sum(case when seisund in ('SOORITATUD', 'MITTE_SOORITATUD') then 1 else 0 end)`,
+      ">",
+      0,
+    );
+}
+
+export async function getPaginatedExaminerStats(
+  filters: DashboardFilters,
+  page: number,
+  pageSize = TABLE_PAGE_SIZE,
+): Promise<PaginatedResult<GroupSuccessStats>> {
+  const grouped = (await buildPaginatedGroupQuery(filters, "examiner")).as(
+    "groupedExaminers",
+  );
+  const database = getDatabase();
+
+  const totalRow = await database
+    .selectFrom(grouped)
+    .select(sql<number>`count(*)`.as("total"))
+    .executeTakeFirstOrThrow();
+
+  const totalItems = Number(totalRow.total);
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+
+  const rows = await database
+    .selectFrom(grouped)
+    .selectAll()
+    .orderBy(
+      sql`"passedCount" * 1.0 / nullif("totalAttempts", 0)`,
+      "desc",
+    )
+    .offset((safePage - 1) * pageSize)
+    .limit(pageSize)
+    .execute();
+
+  return {
+    rows: rows.map((row) => mapGroupSuccessRow(row)),
+    page: safePage,
+    pageSize,
+    totalItems,
+    totalPages,
+  };
+}
+
+export async function getPaginatedDrivingSchoolStats(
+  filters: DashboardFilters,
+  page: number,
+  pageSize = TABLE_PAGE_SIZE,
+): Promise<PaginatedResult<GroupSuccessStats>> {
+  const grouped = (await buildPaginatedGroupQuery(filters, "drivingSchool")).as(
+    "groupedSchools",
+  );
+  const database = getDatabase();
+
+  const totalRow = await database
+    .selectFrom(grouped)
+    .select(sql<number>`count(*)`.as("total"))
+    .executeTakeFirstOrThrow();
+
+  const totalItems = Number(totalRow.total);
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+
+  const rows = await database
+    .selectFrom(grouped)
+    .selectAll()
+    .orderBy("totalAttempts", "desc")
+    .offset((safePage - 1) * pageSize)
+    .limit(pageSize)
+    .execute();
+
+  return {
+    rows: rows.map((row) => mapGroupSuccessRow(row)),
+    page: safePage,
+    pageSize,
+    totalItems,
+    totalPages,
+  };
+}
+
+export async function getPaginatedOutlierSchools(
+  filters: DashboardFilters,
+  page: number,
+  minimumFailuresPerCandidate = 4,
+  pageSize = TABLE_PAGE_SIZE,
+): Promise<PaginatedResult<OutlierSchoolStats>> {
+  const allRows = await getOutlierSchools(filters, minimumFailuresPerCandidate);
+  const totalItems = allRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const start = (safePage - 1) * pageSize;
+
+  return {
+    rows: allRows.slice(start, start + pageSize),
+    page: safePage,
+    pageSize,
+    totalItems,
+    totalPages,
+  };
+}
+
+export async function getPaginatedTopFailures(
+  filters: DashboardFilters,
+  page: number,
+  pageSize = TABLE_PAGE_SIZE,
+): Promise<PaginatedResult<TopFailureStats>> {
+  const database = getDatabase();
+
+  const grouped = database
+    .selectFrom("exams")
+    .select([
+      "eksami_sooritaja as candidateId",
+      "kategooria",
+      sql<number>`count(*)`.as("failureCount"),
+    ])
+    .where((eb) =>
+      eb.and([
+        applyFilters(eb, filters),
+        eb("seisund", "=", "MITTE_SOORITATUD"),
+      ]),
+    )
+    .groupBy(["eksami_sooritaja", "kategooria"])
+    .as("candidateFailures");
+
+  const totalRow = await database
+    .selectFrom(grouped)
+    .select(sql<number>`count(*)`.as("total"))
+    .executeTakeFirstOrThrow();
+
+  const totalItems = Number(totalRow.total);
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+
+  const rows = await database
+    .selectFrom(grouped)
+    .selectAll()
+    .orderBy("failureCount", "desc")
+    .offset((safePage - 1) * pageSize)
+    .limit(pageSize)
+    .execute();
+
+  return {
+    rows: rows.map((row) => ({
+      candidateId: row.candidateId,
+      kategooria: row.kategooria,
+      failureCount: Number(row.failureCount),
+    })),
+    page: safePage,
+    pageSize,
+    totalItems,
+    totalPages,
+  };
+}
+
+function officeFilterExpression(
+  eb: ExpressionBuilder<Database, "exams">,
+  officeName: string,
+) {
+  if (officeName.startsWith("Tallinn")) {
+    return eb("byroo", "like", "Tallinn%");
+  }
+
+  return eb("byroo", "=", officeName);
+}
+
+export async function getOfficeDetail(
+  officeName: string,
+  filters: DashboardFilters,
+): Promise<OfficeDetail | null> {
+  const database = getDatabase();
+
+  const overviewRow = await database
+    .selectFrom("exams")
+    .select([
+      sql<number>`sum(case when seisund = 'SOORITATUD' then 1 else 0 end)`.as(
+        "passedCount",
+      ),
+      sql<number>`sum(case when seisund = 'MITTE_SOORITATUD' then 1 else 0 end)`.as(
+        "failedCount",
+      ),
+      sql<number>`sum(case when seisund in ('SOORITATUD', 'MITTE_SOORITATUD') then 1 else 0 end)`.as(
+        "totalAttempts",
+      ),
+    ])
+    .where((eb) =>
+      eb.and([
+        applyFilters(eb, { ...filters, byroo: "all" }),
+        officeFilterExpression(eb, officeName),
+      ]),
+    )
+    .executeTakeFirst();
+
+  if (!overviewRow || Number(overviewRow.totalAttempts) === 0) {
+    return null;
+  }
+
+  const monthlyRows = await database
+    .selectFrom("exams")
+    .select([
+      "kuupaev as month",
+      sql<number>`sum(case when seisund in ('SOORITATUD', 'MITTE_SOORITATUD') then 1 else 0 end)`.as(
+        "totalAttempts",
+      ),
+      sql<number>`sum(case when seisund = 'SOORITATUD' then 1 else 0 end)`.as(
+        "passedCount",
+      ),
+    ])
+    .where((eb) =>
+      eb.and([
+        applyFilters(eb, { ...filters, byroo: "all" }, { includeCategory: false }),
+        officeFilterExpression(eb, officeName),
+      ]),
+    )
+    .groupBy("kuupaev")
+    .orderBy("kuupaev")
+    .execute();
+
+  const categoryRows = await database
+    .selectFrom("exams")
+    .select([
+      "kategooria as label",
+      sql<number>`sum(case when seisund = 'SOORITATUD' then 1 else 0 end)`.as(
+        "passedCount",
+      ),
+      sql<number>`sum(case when seisund = 'MITTE_SOORITATUD' then 1 else 0 end)`.as(
+        "failedCount",
+      ),
+      sql<number>`sum(case when seisund in ('SOORITATUD', 'MITTE_SOORITATUD') then 1 else 0 end)`.as(
+        "totalAttempts",
+      ),
+    ])
+    .where((eb) =>
+      eb.and([
+        applyFilters(eb, { ...filters, byroo: "all" }, { includeCategory: false }),
+        officeFilterExpression(eb, officeName),
+        eb("seisund", "in", [...COUNTED_STATUSES]),
+      ]),
+    )
+    .groupBy("kategooria")
+    .orderBy("totalAttempts", "desc")
+    .execute();
+
+  return {
+    office: officeName,
+    overview: mapGroupSuccessRow({
+      label: officeName,
+      passedCount: overviewRow.passedCount,
+      failedCount: overviewRow.failedCount,
+      totalAttempts: overviewRow.totalAttempts,
+    }),
+    monthlyTrend: monthlyRows.map((row) => {
+      const totalAttempts = Number(row.totalAttempts);
+      const passedCount = Number(row.passedCount);
+
+      return {
+        month: row.month,
+        totalAttempts,
+        successRate:
+          totalAttempts > 0 ? (passedCount / totalAttempts) * 100 : 0,
+      };
+    }),
+    byCategory: categoryRows.map((row) => mapGroupSuccessRow(row)),
+  };
+}
+
+export async function getExaminerDetail(
+  examinerName: string,
+  filters: DashboardFilters,
+): Promise<ExaminerDetail | null> {
+  const database = getDatabase();
+
+  const summaryRow = await database
+    .selectFrom("exams")
+    .select([
+      sql<number>`count(*)`.as("totalExams"),
+      sql<number>`sum(case when seisund = 'SOORITATUD' then 1 else 0 end)`.as(
+        "passedCount",
+      ),
+      sql<number>`sum(case when seisund = 'MITTE_SOORITATUD' then 1 else 0 end)`.as(
+        "failedCount",
+      ),
+      sql<number>`sum(case when seisund = 'EI_ILMUNUD_KOHALE' then 1 else 0 end)`.as(
+        "noShowCount",
+      ),
+      sql<number>`sum(case when seisund = 'KATKESTATUD' then 1 else 0 end)`.as(
+        "interruptedCount",
+      ),
+      sql<number>`sum(case when seisund in ('SOORITATUD', 'MITTE_SOORITATUD') then 1 else 0 end)`.as(
+        "countedAttempts",
+      ),
+      sql<number>`avg(case when seisund = 'SOORITATUD' and kestus is not null then kestus end)`.as(
+        "averagePassedDuration",
+      ),
+      sql<number>`avg(case when seisund = 'MITTE_SOORITATUD' and kestus is not null then kestus end)`.as(
+        "averageFailedDuration",
+      ),
+      sql<number>`sum(case when kestus is not null then 1 else 0 end)`.as(
+        "recordedDurationCount",
+      ),
+    ])
+    .where((eb) =>
+      eb.and([
+        applyFilters(eb, filters, { includeCategory: false }),
+        eb("eksamineerija", "=", examinerName),
+      ]),
+    )
+    .executeTakeFirst();
+
+  if (!summaryRow || Number(summaryRow.totalExams) === 0) {
+    return null;
+  }
+
+  const monthlyRows = await database
+    .selectFrom("exams")
+    .select([
+      "kuupaev as month",
+      sql<number>`count(*)`.as("totalAttempts"),
+      sql<number>`sum(case when seisund = 'SOORITATUD' then 1 else 0 end)`.as(
+        "passedCount",
+      ),
+    ])
+    .where((eb) =>
+      eb.and([
+        applyFilters(eb, filters, { includeCategory: false }),
+        eb("eksamineerija", "=", examinerName),
+      ]),
+    )
+    .groupBy("kuupaev")
+    .orderBy("kuupaev")
+    .execute();
+
+  const officeRows = await database
+    .selectFrom("exams")
+    .select([
+      "byroo as label",
+      sql<number>`sum(case when seisund = 'SOORITATUD' then 1 else 0 end)`.as(
+        "passedCount",
+      ),
+      sql<number>`sum(case when seisund = 'MITTE_SOORITATUD' then 1 else 0 end)`.as(
+        "failedCount",
+      ),
+      sql<number>`sum(case when seisund in ('SOORITATUD', 'MITTE_SOORITATUD') then 1 else 0 end)`.as(
+        "totalAttempts",
+      ),
+    ])
+    .where((eb) =>
+      eb.and([
+        applyFilters(eb, filters, { includeCategory: false }),
+        eb("eksamineerija", "=", examinerName),
+        eb("seisund", "in", [...COUNTED_STATUSES]),
+      ]),
+    )
+    .groupBy("byroo")
+    .orderBy("totalAttempts", "desc")
+    .execute();
+
+  const categoryRows = await database
+    .selectFrom("exams")
+    .select([
+      "kategooria as label",
+      sql<number>`sum(case when seisund = 'SOORITATUD' then 1 else 0 end)`.as(
+        "passedCount",
+      ),
+      sql<number>`sum(case when seisund = 'MITTE_SOORITATUD' then 1 else 0 end)`.as(
+        "failedCount",
+      ),
+      sql<number>`sum(case when seisund in ('SOORITATUD', 'MITTE_SOORITATUD') then 1 else 0 end)`.as(
+        "totalAttempts",
+      ),
+    ])
+    .where((eb) =>
+      eb.and([
+        applyFilters(eb, filters, { includeCategory: false }),
+        eb("eksamineerija", "=", examinerName),
+        eb("seisund", "in", [...COUNTED_STATUSES]),
+      ]),
+    )
+    .groupBy("kategooria")
+    .orderBy("totalAttempts", "desc")
+    .execute();
+
+  const countedAttempts = Number(summaryRow.countedAttempts);
+  const passedCount = Number(summaryRow.passedCount);
+
+  return {
+    examiner: examinerName,
+    passedCount,
+    failedCount: Number(summaryRow.failedCount),
+    noShowCount: Number(summaryRow.noShowCount),
+    interruptedCount: Number(summaryRow.interruptedCount),
+    totalExams: Number(summaryRow.totalExams),
+    successRate:
+      countedAttempts > 0 ? (passedCount / countedAttempts) * 100 : 0,
+    monthlyActivity: monthlyRows.map((row) => {
+      const totalAttempts = Number(row.totalAttempts);
+      const monthPassedCount = Number(row.passedCount);
+
+      return {
+        month: row.month,
+        totalAttempts,
+        successRate:
+          totalAttempts > 0
+            ? (monthPassedCount / totalAttempts) * 100
+            : 0,
+      };
+    }),
+    byOffice: officeRows.map((row) => mapGroupSuccessRow(row)),
+    byCategory: categoryRows.map((row) => mapGroupSuccessRow(row)),
+    activeMonths: monthlyRows.map((row) => row.month),
+    averageDurationMinutes: {
+      passed:
+        summaryRow.averagePassedDuration === null
+          ? null
+          : Number(summaryRow.averagePassedDuration),
+      failed:
+        summaryRow.averageFailedDuration === null
+          ? null
+          : Number(summaryRow.averageFailedDuration),
+      recordedExams: Number(summaryRow.recordedDurationCount),
+    },
+  };
 }
